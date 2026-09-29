@@ -1,0 +1,26 @@
+{
+  "schema": 1,
+  "hostId": "vps-ejemplo",
+  "ts": 1759100000000,
+  "contenedores": [
+    {
+      "id12": "05144c3e3ba7",
+      "nombre": "glory-rest-app",
+      "sitioUuid": "b8s0cks444o0sogo8kg8wcgw",
+      "dominio": "api.ejemplo.com",
+      "estado": { "estado": "running", "salud": "healthy", "reinicios": 0, "desde": "2026-09-28T10:00:00Z" },
+      "recursos": { "cpuPct": 2.5, "memUsada": 134217728, "memLimite": 1073741824, "blkRO": 4096, "blkWO": 8192, "netRX": 102400, "netTX": 51200 },
+      "puertos": ["3000/tcp"]
+    },
+    {
+      "id12": "a1b2c3d4e5f6",
+      "nombre": "socket-proxy",
+      "estado": { "estado": "running", "salud": "healthy", "reinicios": 0, "desde": "2026-09-28T10:00:00Z" },
+      "recursos": { "cpuPct": 0.1, "memUsada": 8388608, "memLimite": 67108864, "blkRO": 0, "blkWO": 0, "netRX": 1024, "netTX": 1024 },
+      "puertos": ["2375/tcp"]
+    }
+  ],
+  "frescura": { "fuente": "fresco", "edadMs": 120 },
+  "truncado": false,
+  "totalContenedores": 2
+}

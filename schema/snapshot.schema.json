@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/1ndoryu/glory-pulse/schema/snapshot.schema.json",
+  "title": "glory-pulse snapshot",
+  "description": "Contrato versionado del snapshot que sirve el agente glory-pulse. Lo consume workspace-manager (tab vps) y cualquier otra app. Campos mínimos: lo que la tab necesita sin segundo viaje.",
+  "type": "object",
+  "required": ["schema", "hostId", "ts", "contenedores", "frescura", "truncado", "totalContenedores"],
+  "properties": {
+    "schema": {
+      "type": "integer",
+      "const": 1,
+      "description": "Versión del contrato. WM rechaza (fallback legacy) cualquier otra."
+    },
+    "hostId": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Identidad estable del host (hostname). El token Bearer va solo en cabecera, nunca aquí."
+    },
+    "ts": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Unix epoch ms del momento de construcción (reloj del backend; la edad la calcula WM contra su propio reloj)."
+    },
+    "contenedores": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/contenedor" }
+    },
+    "frescura": {
+      "type": "object",
+      "required": ["fuente", "edadMs"],
+      "properties": {
+        "fuente": { "enum": ["fresco", "cache"] },
+        "edadMs": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "truncado": {
+      "type": "boolean",
+      "description": "true si se aplicó recorte determinista (límite documentado en el agente)."
+    },
+    "totalContenedores": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Total real en el demonio, aunque la lista venga recortada."
+    }
+  },
+  "$defs": {
+    "contenedor": {
+      "type": "object",
+      "required": ["id12", "nombre", "estado", "recursos"],
+      "properties": {
+        "id12": { "type": "string", "pattern": "^[0-9a-f]{12}$" },
+        "nombre": { "type": "string", "minLength": 1 },
+        "sitioUuid": { "type": "string" },
+        "dominio": { "type": "string" },
+        "estado": {
+          "type": "object",
+          "required": ["estado", "salud", "reinicios"],
+          "properties": {
+            "estado": { "type": "string" },
+            "salud": { "type": "string" },
+            "reinicios": { "type": "integer", "minimum": 0 },
+            "desde": { "type": "string" }
+          }
+        },
+        "recursos": {
+          "type": "object",
+          "required": ["cpuPct", "memUsada", "memLimite", "blkRO", "blkWO", "netRX", "netTX"],
+          "properties": {
+            "cpuPct": { "type": "number", "minimum": 0 },
+            "memUsada": { "type": "integer", "minimum": 0 },
+            "memLimite": { "type": "integer", "minimum": 0 },
+            "blkRO": { "type": "integer", "minimum": 0 },
+            "blkWO": { "type": "integer", "minimum": 0 },
+            "netRX": { "type": "integer", "minimum": 0 },
+            "netTX": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "puertos": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  }
+}
