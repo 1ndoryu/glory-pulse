@@ -1,10 +1,10 @@
-# glory-pulse: build en la VPS vía Coolify (sin cross-compile ni registry).
-# Contexto = raíz del repo; el pin de producción es tag git, nunca `main`.
-FROM rust:1-bookworm AS build
-WORKDIR /app
-COPY pulse/Cargo.toml pulse/Cargo.lock ./pulse/
-COPY schema ./schema
+# glory-pulse: build FUERA de la VPS (GitHub Actions → GHCR; Rev.4 299A-12).
+# [por qué] Compilar en la VPS productiva reinició dockerd el 2026-09-20; la
+# VPS solo hace pull por tag fijo. Contexto = raíz del repo.
+FROM rust:1.98-bookworm AS build
 WORKDIR /app/pulse
+COPY pulse/Cargo.toml pulse/Cargo.lock ./
+COPY pulse/src ./src
 RUN cargo build --release
 
 FROM debian:bookworm-slim
