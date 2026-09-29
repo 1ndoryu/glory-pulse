@@ -1,0 +1,77 @@
+# Compose de referencia para el servicio pulse (F4 lo adapta al sitio Coolify).
+# pulse JAMÁS monta docker.sock: solo habla con el proxy por TCP interno.
+# Tag del proxy pineado (re-verificar a fecha de deploy; `:latest` prohibido).
+services:
+  pulse:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    environment:
+      - PULSE_TOKEN=${PULSE_TOKEN}
+      - HOST_ID=${HOST_ID:-vps}
+      - PORT=3000
+      - DOCKER_HOST=http://socket-proxy:2375
+      - COOLIFY_API_URL=${COOLIFY_API_URL:-}
+      - COOLIFY_TOKEN=${COOLIFY_TOKEN:-}
+      - RUST_LOG=info
+    depends_on:
+      - socket-proxy
+    networks:
+      - interna
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 128M
+    # Sin volumes, sin puertos públicos: lo expone el router Coolify con TLS.
+
+  socket-proxy:
+    # [por qué] linuxserver expone ALLOW_* por endpoint (cierra el hueco del
+    # CVE-2026-78122: archive/export/logs/top denegados aunque POST=0 no baste).
+    image: lscr.io/linuxserver/socket-proxy:version-3.4.4-r0
+    environment:
+      - CONTAINERS=1
+      - EVENTS=1
+      - VERSION=1
+      - PING=1
+      - POST=0
+      - EXEC=0
+      - IMAGES=0
+      - INFO=0
+      - NETWORKS=0
+      - VOLUMES=0
+      - AUTH=0
+      - BUILD=0
+      - COMMIT=0
+      - CONFIGS=0
+      - DISTRIBUTION=0
+      - NODES=0
+      - PLUGINS=0
+      - SECRETS=0
+      - SERVICES=0
+      - SESSION=0
+      - SWARM=0
+      - SYSTEM=0
+      - TASKS=0
+      - ALLOW_ARCHIVE=0
+      - ALLOW_CHANGES=0
+      - ALLOW_EXPORT=0
+      - ALLOW_LOGS=0
+      - ALLOW_TOP=0
+      - ALLOW_PAUSE=0
+      - ALLOW_RESTARTS=0
+      - ALLOW_START=0
+      - ALLOW_STOP=0
+      - ALLOW_UNPAUSE=0
+      - LOG_LEVEL=info
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - interna
+    read_only: true
+    tmpfs:
+      - /run
+    # Sin `ports`: solo visible en la red interna.
+
+networks:
+  interna:

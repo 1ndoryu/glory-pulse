@@ -1,0 +1,39 @@
+{
+  "read": "18446744073709551615",
+  "preread": "18446744073709551615",
+  "cpu_stats": {
+    "cpu_usage": {
+      "total_usage": 800000000,
+      "percpu_usage": [500000000, 300000000],
+      "usage_in_kernelmode": 200000000,
+      "usage_in_usermode": 600000000
+    },
+    "system_cpu_usage": 40000000000,
+    "online_cpus": 2,
+    "throttling_data": {}
+  },
+  "precpu_stats": {
+    "cpu_usage": { "total_usage": 0 },
+    "system_cpu_usage": 0
+  },
+  "memory_stats": {
+    "usage": 134217728,
+    "limit": 1073741824,
+    "stats": {}
+  },
+  "blkio_stats": {
+    "io_service_bytes_recursive": [
+      { "major": 8, "minor": 0, "op": "Read", "value": 4096 },
+      { "major": 8, "minor": 0, "op": "Write", "value": 8192 },
+      { "major": 8, "minor": 0, "op": "Sync", "value": 100 }
+    ]
+  },
+  "networks": {
+    "eth0": {
+      "rx_bytes": 102400,
+      "tx_bytes": 51200,
+      "rx_packets": 100,
+      "tx_packets": 90
+    }
+  }
+}
