@@ -1,11 +1,12 @@
 # Compose de referencia para el servicio pulse (F4 lo adapta al sitio Coolify).
 # pulse JAMÁS monta docker.sock: solo habla con el proxy por TCP interno.
 # Tag del proxy pineado (re-verificar a fecha de deploy; `:latest` prohibido).
+# [Rev.4] pulse es PULL por tag fijo de GHCR, no build: compilar en la VPS
+# provocó el reinicio de dockerd del 2026-09-20. PULSE_IMAGE_TAG se resuelve
+# en el deploy (formato `sha-<short>` del workflow `docker.yml`).
 services:
   pulse:
-    build:
-      context: ..
-      dockerfile: Dockerfile
+    image: ghcr.io/1ndoryu/glory-pulse:${PULSE_IMAGE_TAG:?tag fijo requerido}
     environment:
       - PULSE_TOKEN=${PULSE_TOKEN}
       - HOST_ID=${HOST_ID:-vps}

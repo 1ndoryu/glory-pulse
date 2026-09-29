@@ -1,0 +1,46 @@
+# glory-pulse: build de la imagen fuera de la VPS + push a GHCR.
+#
+# Por qué: compilar en la VPS productiva provocó el reinicio de dockerd del
+# 2026-09-20 (documentado en coolify-manager-rs `rust-image-stack.yaml`).
+# Patrón `rust-image`: aquí solo build+push por tag fijo; Coolify hace pull.
+# `:latest` prohibido (el manager lo rechaza); el tag canónico es `sha-<short>`.
+# Plataforma fijada a linux/amd64 (VPS Contabo x86_64 verificado 2026-09-29).
+
+name: docker
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "pulse/**"
+      - "Dockerfile"
+      - ".github/workflows/docker.yml"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Tag fijo desde el SHA
+        id: tag
+        run: echo "tag=sha-$(echo '${{ github.sha }}' | cut -c1-7)" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ghcr.io/1ndoryu/glory-pulse:${{ steps.tag.outputs.tag }}
