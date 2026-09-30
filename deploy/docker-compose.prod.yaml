@@ -1,0 +1,129 @@
+# Compose CANONICO de pulse en produccion (309A-1 F2).
+# Espejo del aplicado en Coolify (sitio pulse, r4okw44w84c0ko88g844kosk)
+# el 2026-09-30 (F4 v3, 5021 bytes, verificado con GET /health 200).
+# Si Coolify y este archivo difieren, manda Coolify: re-sincronizar
+# (set-compose + deploy-service) y actualizar este archivo en el acto.
+# Tag: sha-<short> de GHA; `:latest` prohibido.
+services:
+    app:
+        # [299A-12] F4 v2: converge al molde rust-image-stack (pull GHCR, sin build
+        # en VPS). PULSE_TOKEN es la unica clave especifica de pulse; REPO_URL /
+        # BRANCH / APP_BIN / FRONTEND_DIR existen para sync_compose_rust.
+        image: ghcr.io/1ndoryu/glory-pulse:sha-804f306
+        volumes:
+            - app_data:/app/data
+            - /data/uploads/pulse:/app/uploads
+            # [235A-2] Bind mount con clave SSH para metricas infra (VPS1).
+            - /root/studio-ssh:/home/appuser/.ssh
+        environment:
+            # [095A-22] Host postgres-{uuid} unico evita colision con otros stacks.
+            DATABASE_URL: postgres://rust_app:$SERVICE_PASSWORD_POSTGRES@postgres-r4okw44w84c0ko88g844kosk:5432/rust_db
+            JWT_SECRET: $SERVICE_PASSWORD_64_JWTSECRET
+            RUST_LOG: info
+            STATIC_DIR: /app/dist
+            HOST: 0.0.0.0
+            SERVICE_FQDN_APP: https://pulse.wandori.us
+            # [235A-2] Ruta de clave SSH para metricas de infraestructura.
+            COOLIFY_VPS1_SSH_KEY_PATH: /home/appuser/.ssh/id_ed25519
+            # [F4-v3] pulse sale por defecto a http://socket-proxy:2375; el
+            # sidecar es obligatorio (sin el, el binario hace exit(1)).
+            DOCKER_HOST: http://socket-proxy:2375
+            PULSE_TOKEN: $PULSE_TOKEN
+            REPO_URL: 'https://github.com/1ndoryu/glory-pulse'
+            BRANCH: main
+            APP_BIN: pulse
+            FRONTEND_DIR: .
+        depends_on:
+            postgres:
+                condition: service_healthy
+            socket-proxy:
+                condition: service_started
+        # Sin `healthcheck` de app: la imagen GHCR (debian-slim, USER 65534) no
+        # trae curl y pulse es stateless; el gate lo hace el probe externo del
+        # manager + `GET /health` (200) del binario.
+        labels:
+            - "autoheal=true"
+            - "traefik.enable=true"
+            # [235A-4] Forzar red coolify evita race condition post-swap (Traefik no rediscovery).
+            - "traefik.docker.network=coolify"
+            # [234B] Host(`dominio`) SIEMPRE con backticks: sin ellos Traefik
+            # interpreta el dominio como template Go -> "is not defined" -> sin cert.
+            - "traefik.http.routers.pulse-https.rule=Host(`pulse.wandori.us`)"
+            - "traefik.http.routers.pulse-https.entryPoints=https"
+            - "traefik.http.routers.pulse-https.tls=true"
+            - "traefik.http.routers.pulse-https.tls.certresolver=letsencrypt"
+            - "traefik.http.routers.pulse-http.rule=Host(`pulse.wandori.us`)"
+            - "traefik.http.routers.pulse-http.entryPoints=http"
+            - "traefik.http.routers.pulse-http.middlewares=pulse-redirect"
+            - "traefik.http.middlewares.pulse-redirect.redirectscheme.scheme=https"
+            - "traefik.http.services.pulse-svc.loadbalancer.server.port=3000"
+        restart: unless-stopped
+
+    postgres:
+        image: postgres:16-alpine
+        container_name: postgres-r4okw44w84c0ko88g844kosk
+        volumes:
+            - pg_data:/var/lib/postgresql/data
+        environment:
+            POSTGRES_DB: rust_db
+            POSTGRES_USER: rust_app
+            POSTGRES_PASSWORD: $SERVICE_PASSWORD_POSTGRES
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U rust_app -d rust_db"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+
+    # [F4-v3] Sidecar restaurado del draft F0 (F4 v2 lo omitio y pulse hacia
+    # exit(1) "sin Docker"). Nombre = hostname que espera el binario.
+    # pulse JAMAS monta docker.sock: solo habla con este proxy por TCP interno.
+    socket-proxy:
+        # linuxserver expone ALLOW_* por endpoint (cierra el hueco del
+        # CVE-2026-78122: archive/export/logs/top denegados aunque POST=0 no baste).
+        image: lscr.io/linuxserver/socket-proxy:version-3.4.4-r0
+        environment:
+            - CONTAINERS=1
+            - EVENTS=1
+            - VERSION=1
+            - PING=1
+            - POST=0
+            - EXEC=0
+            - IMAGES=0
+            - INFO=0
+            - NETWORKS=0
+            - VOLUMES=0
+            - AUTH=0
+            - BUILD=0
+            - COMMIT=0
+            - CONFIGS=0
+            - DISTRIBUTION=0
+            - NODES=0
+            - PLUGINS=0
+            - SECRETS=0
+            - SERVICES=0
+            - SESSION=0
+            - SWARM=0
+            - SYSTEM=0
+            - TASKS=0
+            - ALLOW_ARCHIVE=0
+            - ALLOW_CHANGES=0
+            - ALLOW_EXPORT=0
+            - ALLOW_LOGS=0
+            - ALLOW_TOP=0
+            - ALLOW_PAUSE=0
+            - ALLOW_RESTARTS=0
+            - ALLOW_START=0
+            - ALLOW_STOP=0
+            - ALLOW_UNPAUSE=0
+            - LOG_LEVEL=info
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock:ro
+        read_only: true
+        tmpfs:
+            - /run
+        # Sin `ports`: solo visible en la red interna del stack.
+        restart: unless-stopped
+
+volumes:
+    app_data:
+    pg_data:
