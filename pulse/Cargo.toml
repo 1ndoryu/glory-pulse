@@ -19,11 +19,14 @@ tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
 [dev-dependencies]
 serde_json = "1"
 
-# 05AA-1 F2 piloto: dev adelgazado (menos .pdb en target/).
-# Solo tablas de lineas: breakpoints por linea y backtraces siguen;
-# inspeccion de variables en el debugger se degrada. Si molesta, revertir.
+# 05AA-1 F2 piloto, alineado a receta 124A-OPT1 de NAKOMI: dev adelgazado
+# (menos .pdb en target/). Solo tablas de lineas: breakpoints por linea y
+# backtraces siguen; inspeccion de variables en el debugger se degrada.
+# Si molesta, revertir.
 [profile.dev]
 debug = "line-tables-only"
+split-debuginfo = "packed"
 
 [profile.dev.package."*"]
+opt-level = 1
 debug = false
