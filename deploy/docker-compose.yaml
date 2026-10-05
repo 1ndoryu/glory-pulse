@@ -1,8 +1,8 @@
 # Compose de referencia para el servicio pulse (F4 lo adapta al sitio Coolify).
-# pulse JAMÁS monta docker.sock: solo habla con el proxy por TCP interno.
+# pulse JAMAS monta docker.sock: solo habla con el proxy por TCP interno.
 # Tag del proxy pineado (re-verificar a fecha de deploy; `:latest` prohibido).
 # [Rev.4] pulse es PULL por tag fijo de GHCR, no build: compilar en la VPS
-# provocó el reinicio de dockerd del 2026-09-20. PULSE_IMAGE_TAG se resuelve
+# provoco el reinicio de dockerd del 2026-09-20. PULSE_IMAGE_TAG se resuelve
 # en el deploy (formato `sha-<short>` del workflow `docker.yml`).
 services:
   pulse:
@@ -24,10 +24,10 @@ services:
         limits:
           cpus: "0.50"
           memory: 128M
-    # Sin volumes, sin puertos públicos: lo expone el router Coolify con TLS.
+    # Sin volumes, sin puertos publicos: lo expone el router Coolify con TLS.
 
   socket-proxy:
-    # [por qué] linuxserver expone ALLOW_* por endpoint (cierra el hueco del
+    # [por que] linuxserver expone ALLOW_* por endpoint (cierra el hueco del
     # CVE-2026-78122: archive/export/logs/top denegados aunque POST=0 no baste).
     image: lscr.io/linuxserver/socket-proxy:version-3.4.4-r0
     environment:

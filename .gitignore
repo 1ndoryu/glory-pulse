@@ -2,3 +2,4 @@
 pulse/target
 .env
 .secrets/
+logs/
