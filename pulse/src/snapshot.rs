@@ -57,6 +57,10 @@ pub struct Contenedor {
     pub sitio_uuid: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub dominio: Option<String>,
+    /// [309A-2] Imagen del `list` (gratis, a memoria). Vacía = desconocida
+    /// y no se serializa (contrato viejo intacto).
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub imagen: String,
     pub estado: EstadoContenedor,
     pub recursos: Recursos,
     #[serde(default)]
@@ -109,4 +113,104 @@ pub fn ahora_ms() -> u64 {
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_millis() as u64)
         .unwrap_or(0)
+}
+
+/// [309A-2] Detalle por sitio en una sola conexión: subconjunto del
+/// snapshot filtrado en memoria (el handler jamás toca Docker).
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DetalleSitio {
+    pub schema: u32,
+    pub host_id: String,
+    pub ts: u64,
+    pub sitio: String,
+    pub contenedores: Vec<Contenedor>,
+    pub total_contenedores: usize,
+}
+
+/// Prefijos Coolify que enlazan contenedor→sitio (misma regla que el
+/// manager `extraerUuidContenedor`: sin ella habría que tocar Rust al
+/// añadir un workload nuevo).
+const PREFIJOS_SITIO: [&str; 5] = ["app", "postgres", "socket-proxy", "mariadb", "wordpress"];
+
+/// Fail-closed: uuid Coolify = alfanumérico no vacío (rechaza `..`, `/`,
+/// query raras antes de filtrar).
+pub fn es_uuid_valido(s: &str) -> bool {
+    !s.is_empty() && s.len() <= 64 && s.bytes().all(|b| b.is_ascii_alphanumeric())
+}
+
+/// Filtro puro (probable sin demonio): por nombre `<pref>-<uuid>` o por
+/// `sitio_uuid` de la meta Coolify cuando exista.
+pub fn filtrar_por_sitio(lista: &[Contenedor], uuid: &str) -> Vec<Contenedor> {
+    lista
+        .iter()
+        .filter(|c| {
+            c.sitio_uuid.as_deref() == Some(uuid)
+                || PREFIJOS_SITIO
+                    .iter()
+                    .any(|p| c.nombre == format!("{p}-{uuid}"))
+        })
+        .cloned()
+        .collect()
+}
+
+/// Construye el detalle ordenado por nombre (sin recorte: un sitio cabe).
+pub fn construir_detalle(host_id: &str, sitio: &str, mut lista: Vec<Contenedor>) -> DetalleSitio {
+    lista.sort_by(|a, b| a.nombre.cmp(&b.nombre));
+    let total = lista.len();
+    DetalleSitio {
+        schema: SCHEMA_VERSION,
+        host_id: host_id.to_owned(),
+        ts: ahora_ms(),
+        sitio: sitio.to_owned(),
+        contenedores: lista,
+        total_contenedores: total,
+    }
+}
+
+#[cfg(test)]
+mod pruebas {
+    use super::*;
+
+    fn contenedor(nombre: &str, uuid: Option<&str>) -> Contenedor {
+        Contenedor {
+            id12: "abc123".into(),
+            nombre: nombre.into(),
+            sitio_uuid: uuid.map(str::to_owned),
+            dominio: None,
+            imagen: String::new(),
+            estado: EstadoContenedor {
+                estado: "running".into(),
+                salud: "sin-chequeo".into(),
+                reinicios: 0,
+                desde: String::new(),
+            },
+            recursos: Recursos::default(),
+            puertos: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn uuid_valido_rechaza_raros() {
+        assert!(es_uuid_valido("r4okw44w84c0ko88g844kosk"));
+        assert!(!es_uuid_valido(""));
+        assert!(!es_uuid_valido("../x"));
+        assert!(!es_uuid_valido("a/b"));
+        assert!(!es_uuid_valido("a b"));
+    }
+
+    #[test]
+    fn filtro_por_nombre_y_por_meta() {
+        let lista = vec![
+            contenedor("app-AAA", None),
+            contenedor("postgres-AAA", None),
+            contenedor("app-BBB", None),
+            contenedor("raro", Some("AAA")),
+            contenedor("socket-proxy-infra", None),
+        ];
+        let got = filtrar_por_sitio(&lista, "AAA");
+        assert_eq!(got.len(), 3);
+        let got = filtrar_por_sitio(&lista, "ZZZ");
+        assert!(got.is_empty());
+    }
 }

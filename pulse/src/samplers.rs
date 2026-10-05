@@ -146,6 +146,7 @@ pub fn recursos_desde_stats(stats: &Value, anterior: Option<MuestraCpu>) -> (Rec
 fn entrada_desde_inspect(
     id12: &str,
     nombre: &str,
+    imagen: &str,
     insp: &Value,
     recursos: Recursos,
     meta: &HashMap<String, (Option<String>, Option<String>)>,
@@ -181,6 +182,7 @@ fn entrada_desde_inspect(
         nombre: nombre.to_owned(),
         sitio_uuid,
         dominio,
+        imagen: imagen.to_owned(),
         estado: EstadoContenedor {
             estado: if estado.is_empty() {
                 "desconocido".into()
@@ -267,7 +269,14 @@ async fn ciclo_stats(docker: &Docker, estado: &EstadoCompartido) {
             }
             _ => por_defecto(),
         };
-        let contenedor = entrada_desde_inspect(&id12, &nombre, &insp, recursos, &meta);
+        let contenedor = entrada_desde_inspect(
+            &id12,
+            &nombre,
+            resumen.image.as_deref().unwrap_or(""),
+            &insp,
+            recursos,
+            &meta,
+        );
         mapa.insert(
             id12,
             Entrada {

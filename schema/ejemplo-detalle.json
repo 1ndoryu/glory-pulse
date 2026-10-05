@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "hostId": "vps",
+  "ts": 1791239357006,
+  "sitio": "r4okw44w84c0ko88g844kosk",
+  "contenedores": [
+    {
+      "id12": "a1b2c3d4e5f6",
+      "nombre": "app-r4okw44w84c0ko88g844kosk",
+      "sitioUuid": "r4okw44w84c0ko88g844kosk",
+      "dominio": "pulse.wandori.us",
+      "imagen": "ghcr.io/1ndoryu/glory-pulse:sha-804f306",
+      "estado": {
+        "estado": "running",
+        "salud": "sin-chequeo",
+        "reinicios": 0,
+        "desde": "2026-10-01T00:00:00Z"
+      },
+      "recursos": {
+        "cpuPct": 1.5,
+        "memUsada": 33554432,
+        "memLimite": 536870912,
+        "blkRO": 0,
+        "blkWO": 4096,
+        "netRX": 1024,
+        "netTX": 2048
+      },
+      "puertos": []
+    }
+  ],
+  "totalContenedores": 1
+}

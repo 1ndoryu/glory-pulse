@@ -58,3 +58,42 @@ fn parseo_stats_fixture() {
     assert!(stats.pointer("/memory_stats/usage").is_some());
     assert!(stats.pointer("/networks/eth0/rx_bytes").is_some());
 }
+
+#[test]
+fn ejemplo_detalle_conforme() {
+    // [309A-2] El detalle por sitio lleva las claves fijas + contenedores
+    // con la misma forma del snapshot (más `imagen` cuando se conoce).
+    let det: Value = serde_json::from_str(include_str!("../../schema/ejemplo-detalle.json"))
+        .expect("ejemplo-detalle.json válido");
+    for k in [
+        "schema",
+        "hostId",
+        "ts",
+        "sitio",
+        "contenedores",
+        "totalContenedores",
+    ] {
+        assert!(det.get(k).is_some(), "detalle sin {k}");
+    }
+    assert_eq!(det["schema"], 1);
+    let sitio = det["sitio"].as_str().unwrap_or("");
+    assert!(!sitio.is_empty());
+    let lista = det["contenedores"].as_array().cloned().unwrap_or_default();
+    assert_eq!(
+        lista.len(),
+        det["totalContenedores"].as_u64().unwrap_or(999) as usize
+    );
+    for c in &lista {
+        for k in ["id12", "nombre", "estado", "recursos"] {
+            assert!(c.get(k).is_some(), "detalle: contenedor sin {k}");
+        }
+        // Regla de pertenencia documentada: nombre `<pref>-<uuid>` o meta.
+        let nombre = c["nombre"].as_str().unwrap_or("");
+        let por_nombre = nombre == format!("app-{sitio}") || nombre.ends_with(&format!("-{sitio}"));
+        let por_meta = c["sitioUuid"].as_str() == Some(sitio);
+        assert!(
+            por_nombre || por_meta,
+            "detalle: {nombre} no es del sitio {sitio}"
+        );
+    }
+}

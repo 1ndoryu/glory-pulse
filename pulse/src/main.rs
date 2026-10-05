@@ -13,8 +13,15 @@ mod samplers;
 mod snapshot;
 
 use auth::{Guardia, bearer};
-use axum::{Json, Router, extract::State, middleware, routing::get};
+use axum::{
+    Json, Router,
+    extract::{Query, State},
+    http::StatusCode,
+    middleware,
+    routing::get,
+};
 use samplers::EstadoCompartido;
+use serde::Deserialize;
 use serde_json::{Value, json};
 use std::sync::Arc;
 use std::time::Instant;
@@ -69,6 +76,32 @@ async fn salud(State(app): State<App>) -> Json<Value> {
     }))
 }
 
+#[derive(Deserialize)]
+struct ParametrosDetalle {
+    sitio: String,
+}
+
+/// [309A-2] Detalle por sitio en UNA conexión: filtra en memoria (jamás
+/// toca Docker ni red). `sitio` fail-closed (uuid alfanumérico); sitio
+/// desconocido = lista vacía con forma válida (200, no 404: el manager
+/// distingue "sin agentes" de "sitio parado").
+async fn detalle(
+    State(app): State<App>,
+    Query(p): Query<ParametrosDetalle>,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    if !snapshot::es_uuid_valido(&p.sitio) {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "error": "sitio-invalido" })),
+        ));
+    }
+    let mapa = app.estado.contenedores.read().await;
+    let lista: Vec<snapshot::Contenedor> = mapa.values().map(|e| e.contenedor.clone()).collect();
+    let filtrada = snapshot::filtrar_por_sitio(&lista, &p.sitio);
+    let det = snapshot::construir_detalle(&app.host_id, &p.sitio, filtrada);
+    Ok(Json(serde_json::to_value(&det).unwrap_or(Value::Null)))
+}
+
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt()
@@ -115,6 +148,7 @@ async fn main() {
     );
     let rutas_protegidas = Router::new()
         .route("/snapshot", get(instantanea))
+        .route("/detalle", get(detalle))
         .route_layer(middleware::from_fn_with_state(guardia.clone(), bearer))
         .with_state(app.clone());
     let app_router = Router::new()
