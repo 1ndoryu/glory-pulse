@@ -27,7 +27,9 @@ Plano de datos de la tab `vps` de workspace-manager.
 - Traefik `Host()` con backticks; `restart --all` prohibido con Rust.
 - Token solo en Coolify/env; en logs unicamente `token_len=64`.
 
-## Pendiente
+## Estado 309A-2 (2026-10-06, F1 hecho, F4 pendiente de sí)
 
-- 309A-2 (propuesto): endpoint de detalle por sitio en una sola conexion
-  (el drill-down legacy son 7 piezas SSH en serie, ~120 s medidos).
+- HECHO: `GET /detalle?sitio=<uuid>` solo memoria + campo `imagen` en
+  `Contenedor` (CHANGELOG `0.2.0`, commit `d84f236` sin push).
+- PENDIENTE: deploy a la VPS (ritual OPERACION.md). Escritura remota:
+  requiere sí explícito del usuario.
