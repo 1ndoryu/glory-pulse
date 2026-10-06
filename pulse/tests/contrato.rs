@@ -9,6 +9,7 @@ fn requeridos() -> Vec<&'static str> {
         "hostId",
         "ts",
         "contenedores",
+        "discoHost",
         "frescura",
         "truncado",
         "totalContenedores",
@@ -25,6 +26,15 @@ fn ejemplo_conforme_al_contrato() {
     assert_eq!(ejemplo["schema"], 1);
     let frescura = &ejemplo["frescura"];
     assert!(frescura.get("fuente").is_some() && frescura.get("edadMs").is_some());
+    // [0110A-1] IO del host: acumulados no negativos (el vivo los trae
+    // crecientes; el ejemplo trae fijos).
+    let disco = &ejemplo["discoHost"];
+    for k in ["sectoresLeidos", "sectoresEscritos"] {
+        assert!(
+            disco.get(k).and_then(serde_json::Value::as_u64).is_some(),
+            "discoHost sin {k}"
+        );
+    }
     for c in ejemplo["contenedores"]
         .as_array()
         .cloned()

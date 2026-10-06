@@ -4,7 +4,7 @@
   "title": "glory-pulse snapshot",
   "description": "Contrato versionado del snapshot que sirve el agente glory-pulse. Lo consume workspace-manager (tab vps) y cualquier otra app. Campos mínimos: lo que la tab necesita sin segundo viaje.",
   "type": "object",
-  "required": ["schema", "hostId", "ts", "contenedores", "frescura", "truncado", "totalContenedores"],
+  "required": ["schema", "hostId", "ts", "contenedores", "discoHost", "frescura", "truncado", "totalContenedores"],
   "properties": {
     "schema": {
       "type": "integer",
@@ -24,6 +24,15 @@
     "contenedores": {
       "type": "array",
       "items": { "$ref": "#/$defs/contenedor" }
+    },
+    "discoHost": {
+      "type": "object",
+      "required": ["sectoresLeidos", "sectoresEscritos"],
+      "description": "IO del host agregado de /proc/diskstats (0110A-1). Acumulados como netRX/netTX: la velocidad la calcula quien consume (delta/dt). Ceros donde /proc no se puede leer.",
+      "properties": {
+        "sectoresLeidos": { "type": "integer", "minimum": 0 },
+        "sectoresEscritos": { "type": "integer", "minimum": 0 }
+      }
     },
     "frescura": {
       "type": "object",

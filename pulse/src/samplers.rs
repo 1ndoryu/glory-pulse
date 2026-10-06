@@ -14,11 +14,13 @@ use tokio::sync::RwLock;
 use tokio::time::{interval, timeout};
 use tracing::{debug, info, warn};
 
-use crate::snapshot::{Contenedor, EstadoContenedor, Recursos};
+use crate::snapshot::{Contenedor, DiscoHost, EstadoContenedor, Recursos};
 
 const INTERVALO_STATS: Duration = Duration::from_secs(10);
 const INTERVALO_META: Duration = Duration::from_secs(60);
 const TIMEOUT_LLAMADA: Duration = Duration::from_secs(5);
+/// Fuente del IO del host; anulable por env para pruebas (`DISKSTATS_PATH`).
+const RUTA_DISKSTATS: &str = "/proc/diskstats";
 
 /// Muestra previa de CPU para calcular el % por delta (el one-shot no trae base).
 #[derive(Debug, Clone, Copy)]
@@ -43,6 +45,9 @@ pub struct EstadoCompartido {
     pub contenedores: RwLock<HashMap<String, Entrada>>,
     /// nombre contenedor → (sitio_uuid, dominio). Best-effort, vacío sin token.
     pub meta: RwLock<HashMap<String, MetaFila>>,
+    /// [0110A-1] IO del host agregado. Lo escribe el sampler de disco cada
+    /// ciclo; lo lee `/snapshot`. Conserva el último bueno ante fallos.
+    pub disco: RwLock<DiscoHost>,
     /// Lo pone el stream de eventos; adelanta el siguiente ciclo de stats.
     pub sucio: AtomicBool,
     pub inicio: Instant,
@@ -53,6 +58,7 @@ impl Default for EstadoCompartido {
         Self {
             contenedores: RwLock::new(HashMap::new()),
             meta: RwLock::new(HashMap::new()),
+            disco: RwLock::new(DiscoHost::default()),
             sucio: AtomicBool::new(false),
             inicio: Instant::now(),
         }
@@ -77,6 +83,80 @@ fn como_str(v: &Value, ptr: &str) -> String {
         .and_then(Value::as_str)
         .unwrap_or("")
         .to_owned()
+}
+
+/// [0110A-1] ¿Disco físico entero? Solo se agregan discos enteros (las
+/// particiones contarían doble con su disco). Reglas sin regex:
+/// - fuera: `loop*`, `ram*`, `zram*`, `dm-*`, `md*`, `sr*`, `fd*`.
+/// - dentro: `sd/hd/vd/xvd` + letras (`sda`, no `sda1`); `nvmeNpM`
+///   (`nvme0n1`, no `nvme0n1p1`); `mmcblkN` (`mmcblk0`, no `mmcblk0p1`).
+/// - lo demás se ignora (fail-closed: mejor subcontar que inventar).
+fn es_disco_fisico(nombre: &str) -> bool {
+    for p in ["loop", "ram", "zram", "dm-", "md", "sr", "fd"] {
+        if nombre.starts_with(p) {
+            return false;
+        }
+    }
+    for p in ["sd", "hd", "vd", "xvd"] {
+        if let Some(resto) = nombre.strip_prefix(p) {
+            return !resto.is_empty() && resto.bytes().all(|b| b.is_ascii_lowercase());
+        }
+    }
+    if let Some(resto) = nombre.strip_prefix("nvme") {
+        // `0n1`: dígitos + 'n' + dígitos, sin 'p' de partición.
+        let mut partes = resto.split('n');
+        let (a, b) = (partes.next().unwrap_or(""), partes.next().unwrap_or(""));
+        return !a.is_empty()
+            && !b.is_empty()
+            && partes.next().is_none()
+            && !b.contains('p')
+            && a.bytes().all(|c| c.is_ascii_digit())
+            && b.bytes().all(|c| c.is_ascii_digit());
+    }
+    if let Some(resto) = nombre.strip_prefix("mmcblk") {
+        return !resto.is_empty() && resto.bytes().all(|b| b.is_ascii_digit());
+    }
+    false
+}
+
+/// [0110A-1] Agrega `/proc/diskstats`: sectores leídos (campo 6) y escritos
+/// (campo 10) de discos físicos. Función pura sobre el texto para probarla
+/// sin `/proc` (`#[cfg(test)]` abajo + fixture en contrato). Basura =
+/// ceros, nunca pánico (best-effort como la meta Coolify).
+pub fn agregar_diskstats(contenido: &str) -> DiscoHost {
+    let mut d = DiscoHost::default();
+    for linea in contenido.lines() {
+        let c: Vec<&str> = linea.split_whitespace().collect();
+        if c.len() < 14 || !es_disco_fisico(c[2]) {
+            continue;
+        }
+        d.sectores_leidos = d.sectores_leidos.saturating_add(c[5].parse().unwrap_or(0));
+        d.sectores_escritos = d
+            .sectores_escritos
+            .saturating_add(c[9].parse().unwrap_or(0));
+    }
+    d
+}
+
+/// Lee y agrega; `None` si el fichero no se puede leer (el sampler
+/// conserva el último bueno). En Windows local siempre es `None`.
+pub fn leer_disco_host(ruta: &str) -> Option<DiscoHost> {
+    std::fs::read_to_string(ruta)
+        .ok()
+        .map(|t| agregar_diskstats(&t))
+}
+
+fn ruta_diskstats() -> String {
+    std::env::var("DISKSTATS_PATH").unwrap_or_else(|_| RUTA_DISKSTATS.to_owned())
+}
+
+/// Un ciclo de disco: lee `/proc/diskstats` y guarda el agregado.
+/// Best-effort: ante cualquier error conserva lo anterior (jamás falla
+/// el servicio por el IO).
+async fn ciclo_disco(estado: &EstadoCompartido) {
+    if let Some(d) = leer_disco_host(&ruta_diskstats()) {
+        *estado.disco.write().await = d;
+    }
 }
 
 /// Convierte un `stats` (one-shot) a `Recursos` con el % por delta.
@@ -201,8 +281,9 @@ fn entrada_desde_inspect(
     }
 }
 
-/// Un ciclo de stats: lista + inspect + stats por contenedor, poda los idos.
+/// Un ciclo de stats: disco del host + lista + inspect + stats por contenedor, poda los idos.
 async fn ciclo_stats(docker: &Docker, estado: &EstadoCompartido) {
+    ciclo_disco(estado).await;
     let lista = match timeout(
         TIMEOUT_LLAMADA,
         docker.list_containers(Some(bollard::query_parameters::ListContainersOptions {
@@ -389,5 +470,65 @@ pub async fn bucle_meta(
             },
             Err(e) => warn!("meta: {e}"),
         }
+    }
+}
+
+#[cfg(test)]
+mod pruebas {
+    use super::*;
+
+    // Formato real del kernel: mayor menor nombre + 11 campos (mínimo 14).
+    const DISKSTATS: &str = "   8       0 sda 100 10 3000 40 50 5 7000 60 0 0 0 0 0 0\n\
+         8       1 sda1 20 2 500 8 10 1 900 9 0 0 0 0 0 0\n\
+         8      16 sdb 0 0 0 0 0 0 0 0 0 0 0 0 0 0\n\
+       259       0 nvme0n1 7 0 800 1 3 0 400 1 0 0 0 0 0 0\n\
+       259       1 nvme0n1p1 7 0 800 1 3 0 400 1 0 0 0 0 0 0\n\
+       179       0 mmcblk0 1 0 100 0 1 0 200 0 0 0 0 0 0 0\n\
+         7       0 loop0 5 0 600 0 0 0 0 0 0 0 0 0 0 0\n\
+         1       0 ram0 9 0 999 0 9 0 888 0 0 0 0 0 0 0\n\
+       253       0 dm-0 4 0 111 0 4 0 222 0 0 0 0 0 0 0\n\
+       basura sin campos\n";
+
+    #[test]
+    fn disco_fisico_solo_enteros() {
+        for d in ["sda", "sdb", "hda", "vda", "xvda", "nvme0n1", "mmcblk0"] {
+            assert!(es_disco_fisico(d), "{d} es disco entero");
+        }
+        for d in [
+            "sda1",
+            "nvme0n1p1",
+            "mmcblk0p1",
+            "loop0",
+            "ram0",
+            "zram0",
+            "dm-0",
+            "md0",
+            "sr0",
+            "fd0",
+            "",
+            "nada",
+        ] {
+            assert!(!es_disco_fisico(d), "{d} no agrega");
+        }
+    }
+
+    #[test]
+    fn diskstats_agrega_enteros_y_excluye_resto() {
+        // sda 3000/7000 + sdb 0/0 + nvme0n1 800/400 + mmcblk0 100/200.
+        let d = agregar_diskstats(DISKSTATS);
+        assert_eq!(d.sectores_leidos, 3900);
+        assert_eq!(d.sectores_escritos, 7600);
+    }
+
+    #[test]
+    fn diskstats_basura_da_ceros() {
+        let d = agregar_diskstats("basura\n\n   1 2 corto\n");
+        assert_eq!(d.sectores_leidos, 0);
+        assert_eq!(d.sectores_escritos, 0);
+    }
+
+    #[test]
+    fn disco_host_sin_fichero_es_none() {
+        assert!(leer_disco_host("/ruta/que/no/existe/diskstats").is_none());
     }
 }

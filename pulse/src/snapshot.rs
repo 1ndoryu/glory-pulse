@@ -74,6 +74,15 @@ pub struct Frescura {
     pub edad_ms: u64,
 }
 
+#[derive(Debug, Clone, Copy, Default, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DiscoHost {
+    /// Sectores leídos acumulados del host (todos los discos físicos).
+    pub sectores_leidos: u64,
+    /// Sectores escritos acumulados del host.
+    pub sectores_escritos: u64,
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Snapshot {
@@ -81,13 +90,22 @@ pub struct Snapshot {
     pub host_id: String,
     pub ts: u64,
     pub contenedores: Vec<Contenedor>,
+    /// [0110A-1] IO del host (`/proc/diskstats` agregado). Acumulados como
+    /// `netRX/netTX`: la velocidad la calcula quien consume (delta/dt).
+    /// Siempre presente (ceros donde `/proc` no se puede leer).
+    pub disco_host: DiscoHost,
     pub frescura: Frescura,
     pub truncado: bool,
     pub total_contenedores: usize,
 }
 
 /// Construye el snapshot ordenado por nombre con recorte determinista.
-pub fn construir(host_id: &str, mut lista: Vec<Contenedor>, edad_ms: u64) -> Snapshot {
+pub fn construir(
+    host_id: &str,
+    mut lista: Vec<Contenedor>,
+    edad_ms: u64,
+    disco: DiscoHost,
+) -> Snapshot {
     lista.sort_by(|a, b| a.nombre.cmp(&b.nombre));
     let total = lista.len();
     let truncado = total > MAX_CONTENEDORES;
@@ -99,6 +117,7 @@ pub fn construir(host_id: &str, mut lista: Vec<Contenedor>, edad_ms: u64) -> Sna
         host_id: host_id.to_owned(),
         ts: ahora_ms(),
         contenedores: lista,
+        disco_host: disco,
         frescura: Frescura {
             fuente: "fresco",
             edad_ms,

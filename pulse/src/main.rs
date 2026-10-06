@@ -62,7 +62,8 @@ async fn instantanea(State(app): State<App>) -> Json<Value> {
         .min(u128::from(u64::MAX)) as u64;
     // [por qué] `edad_ms` aquí es edad del proceso (arranque); el sampler
     // refresca cada 10s, así que la frescura real la pone WM por `ts`.
-    let snap = snapshot::construir(&app.host_id, lista, edad_ms);
+    let disco = *app.estado.disco.read().await;
+    let snap = snapshot::construir(&app.host_id, lista, edad_ms, disco);
     Json(serde_json::to_value(&snap).unwrap_or(Value::Null))
 }
 

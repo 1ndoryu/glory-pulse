@@ -21,6 +21,7 @@
     }
   ],
   "frescura": { "fuente": "fresco", "edadMs": 120 },
+  "discoHost": { "sectoresLeidos": 987654321, "sectoresEscritos": 123456789 },
   "truncado": false,
   "totalContenedores": 2
 }

@@ -3,6 +3,14 @@
 Formato: `## [x.y.z] - fecha` + cambios. El protocolo lleva su propia
 versión (`schema` en el snapshot); aquí van releases del agente.
 
+## [0.3.0] - 2026-10-06 (0110A-1, F1; despliegue pendiente de sí)
+
+- Campo `discoHost` top-level en el snapshot (`sectoresLeidos` /
+  `sectoresEscritos` acumulados de `/proc/diskstats`, solo discos físicos
+  enteros; particiones y `loop/ram/dm/md` excluidos). Ceros donde `/proc`
+  no se lee (`schema` sigue en 1, compatible hacia atrás).
+- Fuente anulable por env `DISKSTATS_PATH` (defecto `/proc/diskstats`).
+
 ## [0.2.0] - 2026-10-05 (309A-2)
 
 - `GET /detalle?sitio=<uuid>` (Bearer): contenedores del sitio en una sola
