@@ -11,8 +11,9 @@
   (no "sitios": cada stack tiene app+db+proxies, más Traefik e infra
   de Coolify; el 2026-09-30 eran 34) y los sirve por HTTP con Bearer.
 - **Imagen:** `ghcr.io/1ndoryu/glory-pulse:<tag-fijo>` (tag `sha-<short>`
-  del workflow `docker.yml`; `:latest` prohibido). Vivo: `sha-804f306`
-  (= `glory-pulse@804f306`).
+   del workflow `docker.yml`; `:latest` prohibido). Vivo: `sha-6479252`
+   (= `glory-pulse@6479252`, 2026-10-06: 0110A-1 `discoHost` + 309A-2
+   `/detalle`; deploy con aviso ajeno `nakomi: error` preexistente).
 - **Compose canónico:** `deploy/docker-compose.prod.yaml` (espejo del
   aplicado en Coolify; si difieren, manda Coolify y hay que re-sincronizar).
 

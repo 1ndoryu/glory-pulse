@@ -3,7 +3,7 @@
 Formato: `## [x.y.z] - fecha` + cambios. El protocolo lleva su propia
 versión (`schema` en el snapshot); aquí van releases del agente.
 
-## [0.3.0] - 2026-10-06 (0110A-1, F1; despliegue pendiente de sí)
+## [0.3.0] - 2026-10-06 (0110A-1, F1+F3; imagen `sha-6479252` en prod)
 
 - Campo `discoHost` top-level en el snapshot (`sectoresLeidos` /
   `sectoresEscritos` acumulados de `/proc/diskstats`, solo discos físicos

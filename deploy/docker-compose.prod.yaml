@@ -9,7 +9,7 @@ services:
         # [299A-12] F4 v2: converge al molde rust-image-stack (pull GHCR, sin build
         # en VPS). PULSE_TOKEN es la unica clave especifica de pulse; REPO_URL /
         # BRANCH / APP_BIN / FRONTEND_DIR existen para sync_compose_rust.
-        image: ghcr.io/1ndoryu/glory-pulse:sha-804f306
+        image: ghcr.io/1ndoryu/glory-pulse:sha-6479252
         volumes:
             - app_data:/app/data
             - /data/uploads/pulse:/app/uploads

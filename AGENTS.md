@@ -27,9 +27,8 @@ Plano de datos de la tab `vps` de workspace-manager.
 - Traefik `Host()` con backticks; `restart --all` prohibido con Rust.
 - Token solo en Coolify/env; en logs unicamente `token_len=64`.
 
-## Estado 309A-2 (2026-10-06, F1 hecho, F4 pendiente de sí)
+## Estado 309A-2 (2026-10-06, F1+F4 hechos vía deploy compartido con 0110A-1)
 
 - HECHO: `GET /detalle?sitio=<uuid>` solo memoria + campo `imagen` en
-  `Contenedor` (CHANGELOG `0.2.0`, commit `d84f236` sin push).
-- PENDIENTE: deploy a la VPS (ritual OPERACION.md). Escritura remota:
-  requiere sí explícito del usuario.
+  `Contenedor` (CHANGELOG `0.2.0`, commit `d84f236`).
+- HECHO F4: imagen `sha-6479252` en prod (incluye 309A-2 + 0110A-1).
