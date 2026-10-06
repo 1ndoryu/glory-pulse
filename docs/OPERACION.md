@@ -62,9 +62,11 @@ Límites conocidos (2026-09-30, no reintentar a ciegas):
 2. Cambiar `image:` en `deploy/docker-compose.prod.yaml` al tag nuevo.
 3. Aplicar: `set-compose -n pulse --compose-file deploy/docker-compose.prod.yaml`
    (valida ASCII/256KiB/`services:`/sin `build:` y verifica con GET).
-4. `deploy-service -n pulse --skip-backup` y smoke test (§2).
-5. Si el health no vuelve a `ok` en ~3 min: el deploy restaura el compose
-   anterior solo (rollback); revisar `logs --target app`.
+4. Materializar: `official-deploy -n pulse` (2026-10-06: `deploy-service`
+   ya NO actualiza la imagen aunque la muestre como `Imagen: <nuevo>`; solo
+   el deploy oficial recrea el contenedor con el tag nuevo).
+5. Smoke test (§2). Si el health no vuelve a `ok` en ~3 min: revisar
+   `logs --target app`.
 
 ## 5. Lecciones que no se repiten (F4)
 
@@ -79,6 +81,11 @@ Límites conocidos (2026-09-30, no reintentar a ciegas):
 - **Nunca compilar en la VPS** (Rev.4): el build del 2026-09-20 reinició
   `dockerd`. Patrón `rust-image`: GHA→GHCR + pull de tag fijo.
 - **Nunca `restart --all`** con workloads Rust (los deja en `exited`).
+- **El template `rust-image-stack.yaml` del manager NO trae `socket-proxy`**
+  (2026-10-06: un `deploy-service` renderizado desde el template + deploy
+  oficial dejó a pulse sin Docker). Para pulse, materializar siempre el
+  compose canónico (`set-compose` + `official-deploy`); pendiente alinear
+  el template en `coolify-manager-rs`.
 - Proxy pineado `lscr.io/linuxserver/socket-proxy:version-3.4.4-r0`
   (tecnativa ≥0.5.1 por CVE-2026-78122: `ALLOW_*=0` por endpoint).
 
