@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "adminFiles": [
+    "sentinel.config.json",
+    "sentinel.lock.json",
+    ".sentinel/init-manifest.json"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "generatedBy": "sentinel init 0.7.13",
+  "analyzers": {
+    "sentinel": {
+      "enabled": true,
+      "version": "0.7.13",
+      "commit": null
+    }
+  }
+}

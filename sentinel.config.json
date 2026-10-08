@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 2,
+  "mode": "enforce",
+  "project": {
+    "primaryBranch": "main"
+  },
+  "guard": {
+    "directCommands": {
+      "npmScripts": [],
+      "npxTools": [],
+      "cargoSubcommands": [
+        "check",
+        "test",
+        "clippy",
+        "fmt"
+      ],
+      "tools": [
+        "git"
+      ]
+    }
+  },
+  "analyzers": {
+    "sentinel": {
+      "enabled": true,
+      "profile": "rust",
+      "config": {
+        "includePatterns": [
+          "**/*.rs",
+          "Cargo.toml",
+          "Cargo.lock"
+        ],
+        "excludePatterns": [
+          "**/target/**",
+          "**/.git/**"
+        ]
+      }
+    }
+  }
+}
