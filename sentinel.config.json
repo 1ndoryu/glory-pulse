@@ -35,5 +35,18 @@
         ]
       }
     }
+  },
+  "runtime": {
+    "minimumVersion": "0.7.21",
+    "protocolVersion": 1,
+    "lockFile": "sentinel.lock.json"
+  },
+  "directoryExceptions": [],
+  "rules": {},
+  "portableBoundaries": {
+    "dom": [],
+    "window": [],
+    "services": [],
+    "loggerModules": []
   }
 }

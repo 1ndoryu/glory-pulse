@@ -1,11 +1,20 @@
 {
   "schemaVersion": 1,
-  "generatedBy": "sentinel init 0.7.13",
+  "generatedAt": "2026-10-10T16:20:32.634Z",
+  "runtime": {
+    "status": "project-adapter",
+    "version": "1.0.0-local",
+    "commit": "repo-scripts",
+    "artifactSha256": null,
+    "identitySha256": "3ad54a78ccec530199dceeed2aaa0cb8cf4772d8ee3002ccf317f71afdd616aa"
+  },
   "analyzers": {
     "sentinel": {
-      "enabled": true,
-      "version": "0.7.13",
-      "commit": null
+      "version": "0.7.21",
+      "protocolVersion": 1,
+      "commit": "efc0c1281628ba664b629fae182191b8ef942cb5",
+      "sha256": "c21f4396a1919fb0867bfac58b8d552165a98f81c8f3bdf9c6329f10b7890cea",
+      "patchSha256": null
     }
   }
 }
