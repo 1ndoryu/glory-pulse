@@ -12,11 +12,11 @@
         "check",
         "test",
         "clippy",
-        "fmt"
+        "fmt",
+        "bench",
+        "nextest"
       ],
-      "tools": [
-        "git"
-      ]
+      "tools": []
     }
   },
   "analyzers": {
