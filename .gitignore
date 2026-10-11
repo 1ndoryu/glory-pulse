@@ -3,3 +3,4 @@ pulse/target
 .env
 .secrets/
 logs/
+.sentinel/release-evidence/
