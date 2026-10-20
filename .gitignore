@@ -4,3 +4,7 @@ pulse/target
 .secrets/
 logs/
 .sentinel/release-evidence/
+# alta 10AA-2 F10
+node_modules/
+.quality-reports/
+.runtime/
