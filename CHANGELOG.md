@@ -3,6 +3,24 @@
 Formato: `## [x.y.z] - fecha` + cambios. El protocolo lleva su propia
 versión (`schema` en el snapshot); aquí van releases del agente.
 
+## [0.4.0] - 2026-10-20 (19AA-3)
+
+- Fuente conmutable por env `PULSE_FUENTE`: `docker` (defecto) o `procesos`.
+  En modo `procesos` no se conecta al API Docker.
+- En modo `procesos` cada "contenedor" del snapshot es un proyecto del taller
+  leído de `/proc` (semilla por `cwd` bajo `PULSE_RAIZ_TALLER`, por defecto
+  `/home/dev/taller`; descendientes por PPID; CPU % por delta de jiffies;
+  puertos de los LISTEN de `/proc/net/tcp{,6}` cruzados por inodo con
+  `/proc/<pid>/fd`; `id12` = hash FNV-1a; `imagen` = cmdline del proceso de
+  más RSS recortada a 120 caracteres). Sigue prohibido exec/spawn.
+- `GET /pieza?sitio=<proyecto>&nombre=<pieza>&lineas=<n>` (Bearer) en modo
+  `procesos`, con las 7 piezas `salud|stats|inspeccion|eventos|bd|diagnostico|
+  logs`; fuera de ese modo responde 404 `piezas-solo-en-procesos`. `sitio` es
+  el nombre del proyecto del taller (admite espacios), fail-closed.
+- `/health` informa además del campo `fuente`.
+- `schema` sigue en 1 (los campos nuevos son aditivos).
+- Uso real: `Arranque up glory-pulse` en la VPS 89, sin Docker ni sudo.
+
 ## [0.3.0] - 2026-10-06 (0110A-1, F1+F3; imagen `sha-6479252` en prod)
 
 - Campo `discoHost` top-level en el snapshot (`sectoresLeidos` /

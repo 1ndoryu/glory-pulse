@@ -97,3 +97,15 @@ Backend `GET /api/vps/agente` (5 s SWR, breaker: 3 fallos→30 s,
 (`schema/ejemplo.json`); el frontend muestra insignia `agente` +
 `en vivo · N contenedores · hace Xs` y pausa el poll con tab oculta.
 Detalle: 309A-2 (el drill-down legacy son 7 piezas SSH en serie, ~120 s).
+
+## 7. Fuente por procesos (taller de la VPS 89)
+
+- **Cuándo:** la VPS 89 no tiene Docker ni sudo; en producción (VPS 66) se
+  sigue usando `docker` por defecto y el compose **no** lleva la variable.
+- **Arranque:** `Arranque up glory-pulse` en el host `dev89`, con
+  `PULSE_FUENTE=procesos` (y `PULSE_RAIZ_TALLER`, por defecto
+  `/home/dev/taller`) en el `.env` — no se versiona; el `.env.example` ya
+  documenta ambas. Modo dev, túnel al puerto local 3000.
+- **Comprobación:** `/health` con `"fuente":"procesos"`; `/snapshot` con los
+  proyectos vivos del taller; `/pieza?sitio=NAKOMI&nombre=logs` (Bearer) para
+  cada una de las 7 piezas.

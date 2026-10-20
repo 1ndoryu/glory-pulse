@@ -173,6 +173,16 @@ pub fn filtrar_por_sitio(lista: &[Contenedor], uuid: &str) -> Vec<Contenedor> {
         .collect()
 }
 
+/// [19AA-3] Filtro de la fuente por procesos: el «sitio» es el nombre del proyecto, que
+/// es exactamente el `nombre` de la fila (no hay uuid de Coolify que enlazar).
+pub fn filtrar_por_nombre(lista: &[Contenedor], nombre: &str) -> Vec<Contenedor> {
+    lista
+        .iter()
+        .filter(|c| c.nombre == nombre)
+        .cloned()
+        .collect()
+}
+
 /// Construye el detalle ordenado por nombre (sin recorte: un sitio cabe).
 pub fn construir_detalle(host_id: &str, sitio: &str, mut lista: Vec<Contenedor>) -> DetalleSitio {
     lista.sort_by(|a, b| a.nombre.cmp(&b.nombre));

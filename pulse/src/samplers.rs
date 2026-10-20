@@ -14,11 +14,14 @@ use tokio::sync::RwLock;
 use tokio::time::{interval, timeout};
 use tracing::{debug, info, warn};
 
+use crate::procesos::Evento;
 use crate::snapshot::{Contenedor, DiscoHost, EstadoContenedor, Recursos};
 
 const INTERVALO_STATS: Duration = Duration::from_secs(10);
 const INTERVALO_META: Duration = Duration::from_secs(60);
 const TIMEOUT_LLAMADA: Duration = Duration::from_secs(5);
+/// Anillo de transiciones del taller que sirve la pieza `eventos` (memoria acotada).
+const MAX_EVENTOS: usize = 300;
 /// Fuente del IO del host; anulable por env para pruebas (`DISKSTATS_PATH`).
 const RUTA_DISKSTATS: &str = "/proc/diskstats";
 
@@ -36,6 +39,16 @@ pub struct Entrada {
     prev: Option<MuestraCpu>,
 }
 
+impl Entrada {
+    /// Fila sin muestra previa: la fuente por procesos ya calcula el % en su barrido.
+    pub fn nueva(contenedor: Contenedor) -> Self {
+        Self {
+            contenedor,
+            prev: None,
+        }
+    }
+}
+
 /// Fila de meta lenta Coolify: (sitio_uuid, dominio). Best-effort.
 pub type MetaFila = (Option<String>, Option<String>);
 
@@ -48,6 +61,9 @@ pub struct EstadoCompartido {
     /// [0110A-1] IO del host agregado. Lo escribe el sampler de disco cada
     /// ciclo; lo lee `/snapshot`. Conserva el último bueno ante fallos.
     pub disco: RwLock<DiscoHost>,
+    /// [19AA-3] Transiciones del taller (arranque, parada, puertos), últimas
+    /// `MAX_EVENTOS`. En la 89 no hay stream de Docker: las deduce el muestreador.
+    pub eventos: RwLock<Vec<Evento>>,
     /// Lo pone el stream de eventos; adelanta el siguiente ciclo de stats.
     pub sucio: AtomicBool,
     pub inicio: Instant,
@@ -59,6 +75,7 @@ impl Default for EstadoCompartido {
             contenedores: RwLock::new(HashMap::new()),
             meta: RwLock::new(HashMap::new()),
             disco: RwLock::new(DiscoHost::default()),
+            eventos: RwLock::new(Vec::new()),
             sucio: AtomicBool::new(false),
             inicio: Instant::now(),
         }
@@ -153,7 +170,9 @@ fn ruta_diskstats() -> String {
 /// Un ciclo de disco: lee `/proc/diskstats` y guarda el agregado.
 /// Best-effort: ante cualquier error conserva lo anterior (jamás falla
 /// el servicio por el IO).
-async fn ciclo_disco(estado: &EstadoCompartido) {
+/// `pub(crate)` desde 19AA-3: en modo `procesos` no hay `ciclo_stats` de Docker que
+/// lo llame, y sin él `/snapshot` devolvía `discoHost` a cero en el taller.
+pub(crate) async fn ciclo_disco(estado: &EstadoCompartido) {
     if let Some(d) = leer_disco_host(&ruta_diskstats()) {
         *estado.disco.write().await = d;
     }
@@ -470,6 +489,67 @@ pub async fn bucle_meta(
             },
             Err(e) => warn!("meta: {e}"),
         }
+    }
+}
+
+/// [19AA-3] Anota las transiciones del taller comparando el barrido nuevo con el anterior
+/// (el mapa de `contenedores` es el estado previo). En la 89 no hay stream de Docker, así
+/// que el evento lo deduce el muestreador. Devuelve los eventos añadidos.
+pub async fn anotar_eventos(estado: &EstadoCompartido, filas: &[Contenedor]) -> Vec<Evento> {
+    let antes: HashMap<String, Vec<String>> = {
+        let mapa = estado.contenedores.read().await;
+        mapa.values()
+            .map(|e| (e.contenedor.nombre.clone(), e.contenedor.puertos.clone()))
+            .collect()
+    };
+    let ahora: HashMap<&str, &Vec<String>> = filas
+        .iter()
+        .map(|c| (c.nombre.as_str(), &c.puertos))
+        .collect();
+    let ts = crate::snapshot::ahora_ms();
+    let mut nuevos: Vec<Evento> = Vec::new();
+    for (nombre, puertos) in &ahora {
+        match antes.get(*nombre) {
+            None => nuevos.push(Evento {
+                ts,
+                proyecto: (*nombre).to_owned(),
+                texto: format!("arranca en {}", unir_puertos(puertos)),
+            }),
+            // [por qué] Los puertos cambian al reiniciar en modo dev/build: es la señal
+            // más útil que da `/proc`, que no distingue un reinicio de una parada.
+            Some(previos) if previos != *puertos => nuevos.push(Evento {
+                ts,
+                proyecto: (*nombre).to_owned(),
+                texto: format!("puertos {} → {}", unir_puertos(previos), unir_puertos(puertos)),
+            }),
+            Some(_) => {}
+        }
+    }
+    for nombre in antes.keys() {
+        if !ahora.contains_key(nombre.as_str()) {
+            nuevos.push(Evento {
+                ts,
+                proyecto: nombre.clone(),
+                texto: "se para".into(),
+            });
+        }
+    }
+    if !nuevos.is_empty() {
+        let mut anillo = estado.eventos.write().await;
+        anillo.extend(nuevos.iter().cloned());
+        let sobra = anillo.len().saturating_sub(MAX_EVENTOS);
+        if sobra > 0 {
+            anillo.drain(..sobra);
+        }
+    }
+    nuevos
+}
+
+fn unir_puertos(puertos: &[String]) -> String {
+    if puertos.is_empty() {
+        "sin puerto".into()
+    } else {
+        puertos.join(", ")
     }
 }
 
