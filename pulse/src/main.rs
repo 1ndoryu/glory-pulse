@@ -119,6 +119,9 @@ async fn main() {
     let guardia = Guardia::nuevo(token);
     let host = host_id();
     let puerto: u16 = env("PORT", "3000").parse().unwrap_or(3000);
+    // [por qué] Por defecto escucha en todas las interfaces (contenedor de Coolify). En el taller
+    // de la VPS 89 PULSE_BIND=127.0.0.1: un 0.0.0.0 dejaría el puerto abierto en la IP pública.
+    let bind = env("PULSE_BIND", "0.0.0.0");
     let docker_host = env("DOCKER_HOST", "http://socket-proxy:2375");
     let docker =
         bollard::Docker::connect_with_http(&docker_host, 120, bollard::API_DEFAULT_VERSION)
@@ -156,7 +159,7 @@ async fn main() {
         .route("/health", get(salud))
         .merge(rutas_protegidas)
         .with_state(app);
-    let oyente = tokio::net::TcpListener::bind(("0.0.0.0", puerto))
+    let oyente = tokio::net::TcpListener::bind((bind.as_str(), puerto))
         .await
         .unwrap_or_else(|e| {
             eprintln!("no escucha en {puerto}: {e}");
