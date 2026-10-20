@@ -9,6 +9,7 @@ compose: `deploy/docker-compose.prod.yaml`; skill `glory-pulse-ops`.
 ## Siguiente bloque
 
 - [ ] `19AA-1` — **Re-verificar el tag exacto del proxy en el próximo deploy.** El runbook prohíbe
+  · prioridad: alta
   `:latest` y fija el tag `sha-<short>` del workflow `docker.yml`, pero el tag del proxy no se
   re-comprobó desde el spike. Criterio: el compose aplicado en Coolify y
   `deploy/docker-compose.prod.yaml` coinciden en el tag fijado (si difieren, manda Coolify y hay que
