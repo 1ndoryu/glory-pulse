@@ -8,24 +8,23 @@ compose: `deploy/docker-compose.prod.yaml`; skill `glory-pulse-ops`.
 
 ## Siguiente bloque
 
-- [ ] `19AA-1` — **Re-verificar el tag exacto del proxy en el próximo deploy.** El runbook prohíbe
-  · prioridad: alta
-  `:latest` y fija el tag `sha-<short>` del workflow `docker.yml`, pero el tag del proxy no se
-  re-comprobó desde el spike. Criterio: el compose aplicado en Coolify y
-  `deploy/docker-compose.prod.yaml` coinciden en el tag fijado (si difieren, manda Coolify y hay que
-  re-sincronizar el espejo).
+- Ninguno.
 
 ## Pendientes
 
-- [ ] `19AA-2` — **Medir la reachability real `workspace-manager → VPS 89 → pulse`.** No es medible
-  hasta que el frente F4 del spike esté cerrado; hoy solo se ha probado desde fuera
-  (`docs/F0-spike.md:80`). Criterio: una consulta del tablero a `pulse` por el camino real, con el
-  resultado anotado en `docs/OPERACION.md`.
+Ninguno.
 
 ## Bloqueos
 
 - **D2 (superficie pública o Tailscale), D3 (coste) y D4 (quién opera)**: decisiones de la usuaria,
   sin tomar (`docs/F0-spike.md:80`). No bloquean la operación actual, que va por Coolify.
 - **Deploy y escrituras en producción**: reservado a la usuaria (AGENTS §3 del protocolo del área).
+- `19AA-1` — **Re-verificar el tag exacto del proxy en el próximo deploy.** Hecho externo: el próximo deploy en
+  Coolify, reservado a la usuaria. Criterio: el compose aplicado en Coolify y
+  `deploy/docker-compose.prod.yaml` coinciden en el tag `sha-<short>` fijado (si difieren, manda Coolify y hay
+  que re-sincronizar el espejo). Antes `:latest` estaba prohibido; el tag del proxy no se re-comprobó desde el spike.
+- `19AA-2` — **Medir la reachability real `workspace-manager → VPS 89 → pulse`.** Depende de D2 (superficie
+  pública o Tailscale), decisión de la usuaria. Cuando D2 esté tomada: una consulta del tablero a `pulse` por el
+  camino real, con el resultado anotado en `docs/OPERACION.md`.
 
 ## Planes activos
