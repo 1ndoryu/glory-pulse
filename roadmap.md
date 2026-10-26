@@ -11,20 +11,18 @@ compose: `deploy/docker-compose.prod.yaml`; skill `glory-pulse-ops`.
 - Ninguno.
 
 ## Pendientes
-
-Ninguno.
-
-## Bloqueos
-
-- **D2 (superficie pública o Tailscale), D3 (coste) y D4 (quién opera)**: decisiones de la usuaria,
-  sin tomar (`docs/F0-spike.md:80`). No bloquean la operación actual, que va por Coolify.
-- **Deploy y escrituras en producción**: reservado a la usuaria (AGENTS §3 del protocolo del área).
-- `19AA-1` — **Re-verificar el tag exacto del proxy en el próximo deploy.** Hecho externo: el próximo deploy en
+- [ ] `19AA-1` — **Re-verificar el tag exacto del proxy en el próximo deploy.** Hecho externo: el próximo deploy en
   Coolify, reservado a la usuaria. Criterio: el compose aplicado en Coolify y
   `deploy/docker-compose.prod.yaml` coinciden en el tag `sha-<short>` fijado (si difieren, manda Coolify y hay
   que re-sincronizar el espejo). Antes `:latest` estaba prohibido; el tag del proxy no se re-comprobó desde el spike.
-- `19AA-2` — **Medir la reachability real `workspace-manager → VPS 89 → pulse`.** Depende de D2 (superficie
+- [ ] `19AA-2` — **Medir la reachability real `workspace-manager → VPS 89 → pulse`.** Depende de D2 (superficie
   pública o Tailscale), decisión de la usuaria. Cuando D2 esté tomada: una consulta del tablero a `pulse` por el
   camino real, con el resultado anotado en `docs/OPERACION.md`.
+
+## Bloqueos
+
+- Nota: **D2 (superficie pública o Tailscale), D3 (coste) y D4 (quién opera)**: decisiones de la usuaria,
+  sin tomar (`docs/F0-spike.md:80`). No bloquean la operación actual, que va por Coolify.
+- **Deploy y escrituras en producción**: reservado a la usuaria (AGENTS §3 del protocolo del área).
 
 ## Planes activos
